@@ -393,7 +393,7 @@ end
 function GalaxyLibrary:ItemDBOnGiveMePressed(wndHandler, wndControl, eMouseButton)
 	-- local selfUnit = GameLib.GetPlayerUnit()
 	local currentItem = self.LatestSelectedCostumeItemId or -1
-	local formattedMessage = "!item add " .. currentItem
+	local formattedMessage = "/c item add " .. currentItem
 	
 	if currentItem == -1 then
 		Print("Click on an item before using this button.")
@@ -412,6 +412,31 @@ function GalaxyLibrary:ItemDBOnGiveMePressed(wndHandler, wndControl, eMouseButto
 	--internalCommandChatCache:Send(formattedMessage, "Galactic Library: NF Edition", selfUnit)
 	ChatSystemLib.Command(formattedMessage)
 end
+
+-- local internalChatCache = nil
+function GalaxyLibrary:ItemDBOnUnlockPressed(wndHandler, wndControl, eMouseButton)
+	-- local selfUnit = GameLib.GetPlayerUnit()
+	local currentItem = self.LatestSelectedCostumeItemId or -1
+	local formattedMessage = "/c costume unlockitem " .. currentItem
+	
+	if currentItem == -1 then
+		Print("Click on an item before using this button.")
+		return
+	end
+	
+	-- if not internalChatCache then
+		-- local channels = ChatSystemLib:GetChannels()
+		-- internalChatCache = channels[ChatSystemLib.ChatChannel_Command]
+	-- end
+	
+	-- TO DO: Investigate message desync bug.
+	-- Said "Desync" occurs on the next message the user sends. If I send "Hello, world!" after using the Gimme button, other people see that.
+	-- Buuuut.... *I* see whatever `formattedMessage` was when this ran. (e.g. !item add 12345) instead of what I actually said.
+	
+	--internalCommandChatCache:Send(formattedMessage, "Galactic Library: NF Edition", selfUnit)
+	ChatSystemLib.Command(formattedMessage)
+end
+
 
 function GalaxyLibrary:ItemDBOnUnload()
 
