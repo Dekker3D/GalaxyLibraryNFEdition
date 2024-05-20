@@ -127,7 +127,7 @@ function GalaxyLibrary:ItemDB_OnScan2()
 end
 
 local strCurrCategory = ""
-function GalaxyLibrary:ItemDBCategorySelect2(sCategory)
+function GalaxyLibrary:ItemDBCategorySelect2()
 	if self.timerDelayLoad then
 		self.timerDelayLoad:Stop()
 		self.timerDelayLoad = nil
@@ -141,7 +141,6 @@ function GalaxyLibrary:RefreshPage()
 	tPanel.wItemScroller:DestroyChildren()
 	tPanel.wItemScroller:SetVScrollPos(0)
 	
-	local nItems = 0
 	if tPanel.tDatabase[self.selectedCategory] then
 		strCurrCategory = self.selectedCategory
 		local tItems = tPanel.tDatabase[self.selectedCategory]
@@ -149,7 +148,55 @@ function GalaxyLibrary:RefreshPage()
 			tItems = self:OmegaFilter(tItems)
 		end
 		
-		tItems = self:GetItemPage(tItems, tPanel.nPageStart, true)
+		local nStart = nil
+		local nEnd = nil
+		tItems, nStart, nEnd = self:GetItemPage(tItems, tPanel.nPageStart, true)
+		tPanel.nPageEnd = nEnd or 1
+		
+		self:DelayLoadItems(tItems)
+	end
+end
+
+function GalaxyLibrary:OnNextPage()
+	local tPanel = self:GetPanel("ItemDB", true)
+	tPanel.wItemScroller:DestroyChildren()
+	tPanel.wItemScroller:SetVScrollPos(0)
+	
+	if tPanel.tDatabase[self.selectedCategory] then
+		strCurrCategory = self.selectedCategory
+		local tItems = tPanel.tDatabase[self.selectedCategory]
+		if (self:HasFiltersEnabled()) then
+			tItems = self:OmegaFilter(tItems)
+		end
+		
+		local nStart = nil
+		local nEnd = nil
+		tItems, nStart, nEnd = self:GetItemPage(tItems, tPanel.nPageEnd + 1, true)
+		tPanel.nPageStart = nStart or 1
+		tPanel.nPageEnd = nEnd or 1
+		
+		self:DelayLoadItems(tItems)
+	end
+end
+
+
+function GalaxyLibrary:OnPreviousPage()
+	local tPanel = self:GetPanel("ItemDB", true)
+	tPanel.wItemScroller:DestroyChildren()
+	tPanel.wItemScroller:SetVScrollPos(0)
+	
+	if tPanel.tDatabase[self.selectedCategory] then
+		strCurrCategory = self.selectedCategory
+		local tItems = tPanel.tDatabase[self.selectedCategory]
+		if (self:HasFiltersEnabled()) then
+			tItems = self:OmegaFilter(tItems)
+		end
+		
+		local nStart = nil
+		local nEnd = nil
+		tItems, nStart, nEnd = self:GetItemPage(tItems, tPanel.nPageStart - 1, false)
+		tPanel.nPageStart = nStart or 1
+		tPanel.nPageEnd = nEnd or 1
 		
 		self:DelayLoadItems(tItems)
 	end
@@ -167,6 +214,8 @@ function GalaxyLibrary:DelayLoadItems(tItems)
 	
 	tPanel.wItemScroller:ArrangeChildrenVert()
 	tPanel.wItemScroller:Show(true)
+	
+	if tPanel.nPageStart ~= nil then tPanel.wPageID:SetText(tPanel.nPageStart) end
 end
 
 ---Name Filter---------------------------------------------------------------------------------
@@ -227,7 +276,6 @@ end
 
 local itemsPerPage = 11
 function GalaxyLibrary:GetItemPage(tItems, ID, forward)
-	Print("GetItemPage")
 	local start = 1
 	local stop = #tItems
 	local step = 1
@@ -239,22 +287,28 @@ function GalaxyLibrary:GetItemPage(tItems, ID, forward)
 	
 	local foundItems = {}
 	
-	local firstID = 0
-	local lastID = 0
+	local firstID = nil
+	local lastID = nil
 	
 	for i = start, stop, step do
 		local item = tItems[i]
 		if forward and item.id >= ID and self:OmegaFilter(item) then
 			table.insert(foundItems, item)
 			lastID = item.id
-			if firstID == 0 then firstID = lastID end
+			if firstID == nil then firstID = lastID end
 		end
 		if (not forward) and item.id <= ID and self:OmegaFilter(item) then
 			table.insert(foundItems, 1, item)
 			lastID = item.id
-			if firstID == 0 then firstID = lastID end
+			if firstID == nil then firstID = lastID end
 		end
 		if #foundItems >= itemsPerPage then break end
+	end
+	
+	if not forward then
+		local tmp = firstID
+		firstID = lastID
+		lastID = tmp
 	end
 	
 	return foundItems, firstID, lastID

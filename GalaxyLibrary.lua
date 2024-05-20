@@ -1052,13 +1052,13 @@ function GalaxyLibrary:OnItemDBCategoryCheck( wndHandler, wndControl, eMouseButt
 	wndControl:FindChild("Arrow"):Show(true)
 	local sCategory = wndControl:GetData()
 	self.selectedCategory = sCategory
-	self:ItemDBCategorySelect2(sCategory)
+	self:ItemDBCategorySelect2()
 end
 
 function GalaxyLibrary:OnItemDBCategoryUncheck( wndHandler, wndControl, eMouseButton )
 	wndControl:FindChild("Arrow"):Show(false)
 	self.selectedCategory = nil
-	self:ItemDBCategorySelect2(sCategory)
+	self:ItemDBCategorySelect2()
 end
 
 ---------------------------------------------------------------------------------------------------
