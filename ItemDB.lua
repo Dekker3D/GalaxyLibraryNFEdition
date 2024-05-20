@@ -35,12 +35,7 @@ function GalaxyLibrary:ItemDB_OnStartScan()
 
 
 	local nCreatureId = 59328
-	local nRandom = 0 
-	for i = 1, 4 do -- math.random isn't very random atm
-		nRandom = nRandom + math.random(1, 100)
-	end
-	nRandom = nRandom / 4
-	if nRandom > 75  then
+	if math.random(1,100) > 75 then
 		nCreatureId = 59331
 	end
 	for i=1, #tPanel.wCostumes do
