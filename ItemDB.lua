@@ -127,94 +127,31 @@ function GalaxyLibrary:ItemDB_OnScan2()
 end
 
 local strCurrCategory = ""
-local nItemDisplayThreshold = 5000
 function GalaxyLibrary:ItemDBCategorySelect2(sCategory)
 	if self.timerDelayLoad then
 		self.timerDelayLoad:Stop()
 		self.timerDelayLoad = nil
 	end
 	
+	self:RefreshPage()
+end
+
+function GalaxyLibrary:RefreshPage()
 	local tPanel = self:GetPanel("ItemDB", true)
 	tPanel.wItemScroller:DestroyChildren()
 	tPanel.wItemScroller:SetVScrollPos(0)
 	
 	local nItems = 0
-	if tPanel.tDatabase[sCategory] then
-		strCurrCategory = sCategory
-		local bFilters, tItems = self:OmegaFilter(tPanel.tDatabase[sCategory])
+	if tPanel.tDatabase[self.selectedCategory] then
+		strCurrCategory = self.selectedCategory
+		local tItems = tPanel.tDatabase[self.selectedCategory]
+		if (self:HasFiltersEnabled()) then
+			tItems = self:OmegaFilter(tItems)
+		end
 		
-		if #tItems >= nItemDisplayThreshold then
-		--if #tPanel.tDatabase[sCategory] >= nItemDisplayThreshold then
-			--show the warning screen for filters or force load (possibility of crash)
-			local wndWarning = Apollo.LoadForm(self.xmlPanelsDoc, "HighLoadWarning", tPanel.wItemScroller, self)
-			local strWarning =	"A filter is suggested for this category.".."\n"..
-								"".."\n"..
-								"This category has a high number of items. Loading it may cause the game to crash and/or perform slowly while viewing items. Filtering before loading will resolve this issue. Would you like to load anyways?"
-			wndWarning:FindChild("WarningText"):SetText(strWarning)
-			wndWarning:FindChild("LoadAnywayBtn"):SetData("DelayLoadCategory")
-		else
-			if bFilters then
-				self:DelayLoadItems(tItems)
-			else
-				self:DelayLoadCategory()
-			end
-		end
-	end
-	--tPanel.wItemScroller:ArrangeChildrenVert()
-	--tPanel.wItemScroller:Show(nItems > 0)
-end
-
-function GalaxyLibrary:OnLoadAnyway( wndHandler, wndControl, eMouseButton )
-	local strFunction = wndHandler:GetData()
-	if strFunction then
-		--Print(strFunction)
-		self[strFunction](self)
-	end
-end
-
-local nTicks = 0
-local nScanPerTick = 1000
-local tLoadItems = {}
-function GalaxyLibrary:DelayLoadCategory()
-	local tPanel = self:GetPanel("ItemDB", true)
-	tPanel.wItemScroller:DestroyChildren()
-	tPanel.wItemScroller:SetVScrollPos(0)
+		tItems = self:GetItemPage(tItems, tPanel.nPageStart, true)
 		
-	nTicks = 0
-	self:OnDelayLoadCategory()
-end
-
-function GalaxyLibrary:OnDelayLoadCategory()
-	local tPanel = self:GetPanel("ItemDB", true)
-	local nMax = math.min((nTicks+1)*nScanPerTick, #tPanel.tDatabase[strCurrCategory])
-	
-	for idx=nTicks*nScanPerTick+1, nMax do
-		local tItem = tPanel.tDatabase[strCurrCategory][idx]
-		local wnd = Apollo.LoadForm(self.xmlPanelsDoc, "ItemDatabaseItem", tPanel.wItemScroller, self)
-		wnd:FindChild("Icon"):SetSprite(tItem.item:GetIcon())
-		wnd:FindChild("Label"):SetText(tItem.id..":"..tItem.name)
-		wnd:FindChild("Label"):SetTextColor(karEvalColors[tItem.quality])
-		wnd:SetData(tonumber(tItem.id))
-	end
-	
-	tPanel.wItemScroller:ArrangeChildrenVert()
-	tPanel.wItemScroller:Show(true)
-	
-	if nMax >= #tPanel.tDatabase[strCurrCategory] then
-		if self.timerDelayLoad then
-			self.timerDelayLoad:Stop()
-			self.timerDelayLoad = nil
-			tPanel.wLoadingScreen:Show(false)
-		end
-	else
-		if not self.timerDelayLoad then
-			tPanel.wLoadingScreen:Show(true)
-			tPanel.wLoading_Pct:SetText("0%")
-			self.timerDelayLoad = ApolloTimer.Create(1,true,"OnDelayLoadCategory",self)
-		end
-		nTicks = nTicks+1
-		local pct = string.format("%0.0f", (nTicks*nScanPerTick/#tPanel.tDatabase[strCurrCategory]) * 100)
-		tPanel.wLoading_Pct:SetText(pct.."%")
+		self:DelayLoadItems(tItems)
 	end
 end
 
@@ -269,23 +206,7 @@ function GalaxyLibrary:QualityFilterChange( wndHandler, wndControl, eMouseButton
 	local eQuality = Item.CodeEnumItemQuality[wndHandler:GetName()]
 	tQualityFilter[eQuality] = bChecked
 	
-	self:FilterByQuality()
-end
-
-function GalaxyLibrary:FilterByQuality(strName)
-	local tPanel = self:GetPanel("ItemDB", true)
-	
-	for _,wnd in pairs(tPanel.wItemScroller:GetChildren()) do
-		local item = Item.GetDataFromId(wnd:GetData())
-		if item then --TODO: WTF???? It should be existing.
-			if tQualityFilter[item:GetItemQuality()] then
-				wnd:Show(true)
-			else
-				wnd:Show(false)
-			end
-		end
-	end
-	tPanel.wItemScroller:ArrangeChildrenVert()
+	self:RefreshPage()
 end
 
 ---Level Filter--------------------------------------------------------------------------------
@@ -293,9 +214,8 @@ local nLowLevelFilter = 0
 local nHighLevelFilter = 0
 
 ---Omega Filter--------------------------------------------------------------------------------
-function GalaxyLibrary:OmegaFilter(tItems)
+function GalaxyLibrary:HasFiltersEnabled()
 	local bFiltered = false
-	local tFilteredItems = {}
 	if strNameFilter ~= "" and strNameFilter ~= nil then
 		bFiltered = true
 	end
@@ -303,16 +223,50 @@ function GalaxyLibrary:OmegaFilter(tItems)
 		bFiltered = true
 		break
 	end
-	
-	for _,item in pairs(tItems) do
-		if item.name:find(nocase(strNameFilter)) then											--Name filter
-			if tQualityFilter[item.quality] == nil or tQualityFilter[item.quality] then												--Quality filter
-				--if item.level >= nLowLevelFilter and item.level <= nHighLevelFilter then		--Level filter
-					table.insert(tFilteredItems, item)
-				--end
-			end
-		end
+end
+
+local itemsPerPage = 11
+function GalaxyLibrary:GetItemPage(tItems, ID, forward)
+	Print("GetItemPage")
+	local start = 1
+	local stop = #tItems
+	local step = 1
+	if not forward then
+		start = stop
+		stop = 1
+		step = -1
 	end
 	
-	return bFiltered, tFilteredItems
+	local foundItems = {}
+	
+	local firstID = 0
+	local lastID = 0
+	
+	for i = start, stop, step do
+		local item = tItems[i]
+		if forward and item.id >= ID and self:OmegaFilter(item) then
+			table.insert(foundItems, item)
+			lastID = item.id
+			if firstID == 0 then firstID = lastID end
+		end
+		if (not forward) and item.id <= ID and self:OmegaFilter(item) then
+			table.insert(foundItems, 1, item)
+			lastID = item.id
+			if firstID == 0 then firstID = lastID end
+		end
+		if #foundItems >= itemsPerPage then break end
+	end
+	
+	return foundItems, firstID, lastID
+end
+
+function GalaxyLibrary:OmegaFilter(item)
+	if item.name:find(nocase(strNameFilter)) then											--Name filter
+		if tQualityFilter[item.quality] then												--Quality filter
+			--if item.level >= nLowLevelFilter and item.level <= nHighLevelFilter then		--Level filter
+				return true
+			--end
+		end
+	end
+	return false
 end

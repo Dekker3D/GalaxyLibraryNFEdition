@@ -82,6 +82,8 @@ function GalaxyLibrary:new(o)
 	self.scanlimit = iScan
 	self.sheathed = false
 	self.wndList = nil
+	
+	self.selectedCategory = nil
 
 	
 	
@@ -338,6 +340,9 @@ function GalaxyLibrary:ItemDBOnLoad()
 	tPanel.bHasScanned = false
 	tPanel.bSheathed = true
 	tPanel.nCostumeIndex = 1
+	
+	tPanel.nPageStart = 1
+	tPanel.nPageEnd = 2
 
 	
 	local wCostumeContainer = tPanel.wnd:FindChild("CostumeContainer")
@@ -368,6 +373,8 @@ function GalaxyLibrary:ItemDBOnLoad()
 	for i=1, 3 do
 		tPanel.tLevels[i] = {}
 	end
+	
+	tPanel.wPageID = tPanel.wnd:FindChild("PageID")
 	
 	
 	-- Level Dims
@@ -1044,11 +1051,14 @@ end
 function GalaxyLibrary:OnItemDBCategoryCheck( wndHandler, wndControl, eMouseButton )
 	wndControl:FindChild("Arrow"):Show(true)
 	local sCategory = wndControl:GetData()
+	self.selectedCategory = sCategory
 	self:ItemDBCategorySelect2(sCategory)
 end
 
 function GalaxyLibrary:OnItemDBCategoryUncheck( wndHandler, wndControl, eMouseButton )
 	wndControl:FindChild("Arrow"):Show(false)
+	self.selectedCategory = nil
+	self:ItemDBCategorySelect2(sCategory)
 end
 
 ---------------------------------------------------------------------------------------------------
