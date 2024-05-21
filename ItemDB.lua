@@ -92,6 +92,7 @@ function GalaxyLibrary:ItemDB_OnScan2()
 					item = item,
 					name = item:GetName(),
 					quality = Item.GetItemQuality(i),
+					level = item:GetRequiredLevel(),
 					
 					iFamilyId = iFamilyId,
 					iTypeId = iTypeId,
@@ -144,9 +145,6 @@ function GalaxyLibrary:RefreshPage()
 	if tPanel.tDatabase[self.selectedCategory] then
 		strCurrCategory = self.selectedCategory
 		local tItems = tPanel.tDatabase[self.selectedCategory]
-		if (self:HasFiltersEnabled()) then
-			tItems = self:OmegaFilter(tItems)
-		end
 		
 		local nStart = nil
 		local nEnd = nil
@@ -165,9 +163,6 @@ function GalaxyLibrary:OnNextPage()
 	if tPanel.tDatabase[self.selectedCategory] then
 		strCurrCategory = self.selectedCategory
 		local tItems = tPanel.tDatabase[self.selectedCategory]
-		if (self:HasFiltersEnabled()) then
-			tItems = self:OmegaFilter(tItems)
-		end
 		
 		local nStart = nil
 		local nEnd = nil
@@ -177,6 +172,7 @@ function GalaxyLibrary:OnNextPage()
 		
 		self:DelayLoadItems(tItems)
 	end
+	if tPanel.nPageStart ~= nil then tPanel.wPageID:SetText(tPanel.nPageStart) end
 end
 
 
@@ -188,9 +184,6 @@ function GalaxyLibrary:OnPreviousPage()
 	if tPanel.tDatabase[self.selectedCategory] then
 		strCurrCategory = self.selectedCategory
 		local tItems = tPanel.tDatabase[self.selectedCategory]
-		if (self:HasFiltersEnabled()) then
-			tItems = self:OmegaFilter(tItems)
-		end
 		
 		local nStart = nil
 		local nEnd = nil
@@ -199,6 +192,19 @@ function GalaxyLibrary:OnPreviousPage()
 		tPanel.nPageEnd = nEnd or 1
 		
 		self:DelayLoadItems(tItems)
+	end
+	if tPanel.nPageStart ~= nil then tPanel.wPageID:SetText(tPanel.nPageStart) end
+end
+
+function GalaxyLibrary:OnPageIDChanged(wndHandler, wndControl, strFilterName)
+	local _txt = wndControl:GetText()
+	if _txt ~= nil and _text ~= "" then
+		_txt = tonumber(_txt)
+		if _txt ~= nil and _txt >= 0 then
+			local tPanel = self:GetPanel("ItemDB", true)
+			tPanel.nPageStart = _txt
+			self:RefreshPage()
+		end
 	end
 end
 
@@ -214,17 +220,11 @@ function GalaxyLibrary:DelayLoadItems(tItems)
 	
 	tPanel.wItemScroller:ArrangeChildrenVert()
 	tPanel.wItemScroller:Show(true)
-	
-	if tPanel.nPageStart ~= nil then tPanel.wPageID:SetText(tPanel.nPageStart) end
 end
 
 ---Name Filter---------------------------------------------------------------------------------
 local strNameFilter = ""
-
-function GalaxyLibrary:OnFilterNameChanged( wndHandler, wndControl, strFilterName )
-	strNameFilter = strFilterName
-	self:FilterByName()
-end
+local bNameFilterEnabled = false
 
 local function nocase (s)
   s = string.gsub(s, "%a", function (c)
@@ -234,17 +234,14 @@ local function nocase (s)
   return s
 end
 
-function GalaxyLibrary:FilterByName()
-	local tPanel = self:GetPanel("ItemDB", true)
-	
-	for _,wnd in pairs(tPanel.wItemScroller:GetChildren()) do
-		if string.find(wnd:FindChild("Label"):GetText(), nocase(strNameFilter)) then
-			wnd:Show(true)
-		else
-			wnd:Show(false)
-		end
+function GalaxyLibrary:OnFilterNameChanged( wndHandler, wndControl, strFilterName )
+	strNameFilter = nocase(strFilterName)
+	if strNameFilter == nil or strNameFilter == "" then
+		bNameFilterEnabled = false
+	else
+		bNameFilterEnabled = true
 	end
-	tPanel.wItemScroller:ArrangeChildrenVert()
+	self:RefreshPage()
 end
 
 ---Quality Filter------------------------------------------------------------------------------
@@ -268,21 +265,30 @@ function GalaxyLibrary:QualityFilterChange( wndHandler, wndControl, eMouseButton
 end
 
 ---Level Filter--------------------------------------------------------------------------------
-local nLowLevelFilter = 0
-local nHighLevelFilter = 0
+local nMinLevelFilter = nil
+local nMaxLevelFilter = nil
 
----Omega Filter--------------------------------------------------------------------------------
-function GalaxyLibrary:HasFiltersEnabled()
-	local bFiltered = false
-	if strNameFilter ~= "" and strNameFilter ~= nil then
-		bFiltered = true
+function GalaxyLibrary:OnMinLevelChange( wndHandler, wndControl, eMouseButton )
+	local _txt = wndControl:GetText()
+	if _txt == nil then
+		nMinLevelFilter = nil
+		return
 	end
-	for key,val in pairs(tQualityFilter) do
-		bFiltered = true
-		break
-	end
+	nMinLevelFilter = tonumber(_txt)
+	self:RefreshPage()
 end
 
+function GalaxyLibrary:OnMaxLevelChange( wndHandler, wndControl, eMouseButton )
+	local _txt = wndControl:GetText()
+	if _txt == nil then
+		nMaxLevelFilter = nil
+		return
+	end
+	nMaxLevelFilter = tonumber(_txt)
+	self:RefreshPage()
+end
+
+---Omega Filter--------------------------------------------------------------------------------
 local itemsPerPage = 11
 function GalaxyLibrary:GetItemPage(tItems, ID, forward)
 	local start = 1
@@ -324,11 +330,14 @@ function GalaxyLibrary:GetItemPage(tItems, ID, forward)
 end
 
 function GalaxyLibrary:OmegaFilter(item)
-	if item.name:find(nocase(strNameFilter)) then											--Name filter
-		if (not bQualityFilterEnabled) or tQualityFilter[item.quality] then												--Quality filter
-			--if item.level >= nLowLevelFilter and item.level <= nHighLevelFilter then		--Level filter
-				return true
-			--end
+	if item == nil then return false end
+	if (not bNameFilterEnabled) or (item.name ~= nil and item.name:find(strNameFilter)) then				--Name filter
+		if (not bQualityFilterEnabled) or tQualityFilter[item.quality] then									--Quality filter
+			if nMinLevelFilter == nil or (item.level ~= nil and item.level >= nMinLevelFilter) then			--Level filter
+				if nMaxLevelFilter == nil or (item.level ~= nil and item.level <= nMaxLevelFilter) then		--Level filter
+					return true
+				end
+			end
 		end
 	end
 	return false
