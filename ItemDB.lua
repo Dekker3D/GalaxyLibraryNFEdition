@@ -35,12 +35,17 @@ function GalaxyLibrary:ItemDB_OnStartScan()
 
 
 	local nCreatureId = 59328
-	if math.random(1,100) > 75 then
+	if math.random(1,100) > 90 then
 		nCreatureId = 59331
 	end
 	for i=1, #tPanel.wCostumes do
 		tPanel.wCostumes[i]:SetCostumeToCreatureId(nCreatureId)	-- :D
 	end
+	
+	local filterFiller = tPanel.wnd:FindChild("FilterFiller")
+	filterFiller:SetCostumeToCreatureId(22075)
+	filterFiller:SetSpin(330)
+	filterFiller:SetModelSequence(625) -- Default_Sleep
 	
 	--Filters
 	table.insert(self.tPatchItems, {"Newest Items",self.tPatchItems[#self.tPatchItems][2]+1, nItemDBScan})
