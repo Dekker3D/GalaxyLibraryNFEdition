@@ -249,11 +249,20 @@ end
 
 ---Quality Filter------------------------------------------------------------------------------
 local tQualityFilter = {}
+local bQualityFilterEnabled = false
 
 function GalaxyLibrary:QualityFilterChange( wndHandler, wndControl, eMouseButton )
 	local bChecked = wndHandler:IsChecked()
 	local eQuality = Item.CodeEnumItemQuality[wndHandler:GetName()]
 	tQualityFilter[eQuality] = bChecked
+	
+	bQualityFilterEnabled = false
+	for _, qual in pairs(tQualityFilter) do
+		if qual == true then
+			bQualityFilterEnabled = true
+			break
+		end
+	end
 	
 	self:RefreshPage()
 end
@@ -316,7 +325,7 @@ end
 
 function GalaxyLibrary:OmegaFilter(item)
 	if item.name:find(nocase(strNameFilter)) then											--Name filter
-		if tQualityFilter[item.quality] then												--Quality filter
+		if (not bQualityFilterEnabled) or tQualityFilter[item.quality] then												--Quality filter
 			--if item.level >= nLowLevelFilter and item.level <= nHighLevelFilter then		--Level filter
 				return true
 			--end
