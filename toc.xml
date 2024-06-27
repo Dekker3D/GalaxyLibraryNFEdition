@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-<Addon Author="Lemon King" APIVersion="8" Name="Galaxy Library" Description="" Version="0.04">
+<Addon Author="Lemon King" APIVersion="16" Name="Galaxy Library" Description="" Version="0.05">
     <!-- Libraries -->
     <!-- Main Addon -->
     <Script Name="GalaxyLibrary.lua"/>
