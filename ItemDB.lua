@@ -98,6 +98,7 @@ function GalaxyLibrary:ItemDB_OnScan2()
 					name = item:GetName(),
 					quality = Item.GetItemQuality(i),
 					level = item:GetRequiredLevel(),
+					powerlevel = item:GetPowerLevel(),
 					
 					iFamilyId = iFamilyId,
 					iTypeId = iTypeId,
@@ -273,6 +274,9 @@ end
 local nMinLevelFilter = nil
 local nMaxLevelFilter = nil
 
+local nMinPowerLevelFilter = nil
+local nMaxPowerLevelFilter = nil
+
 function GalaxyLibrary:OnMinLevelChange( wndHandler, wndControl, eMouseButton )
 	local _txt = wndControl:GetText()
 	if _txt == nil then
@@ -290,6 +294,26 @@ function GalaxyLibrary:OnMaxLevelChange( wndHandler, wndControl, eMouseButton )
 		return
 	end
 	nMaxLevelFilter = tonumber(_txt)
+	self:RefreshPage()
+end
+
+function GalaxyLibrary:OnMinPowerLevelChange( wndHandler, wndControl, eMouseButton )
+	local _txt = wndControl:GetText()
+	if _txt == nil then
+		nMinPowerLevelFilter = nil
+		return
+	end
+	nMinPowerLevelFilter = tonumber(_txt)
+	self:RefreshPage()
+end
+
+function GalaxyLibrary:OnMaxPowerLevelChange( wndHandler, wndControl, eMouseButton )
+	local _txt = wndControl:GetText()
+	if _txt == nil then
+		nMaxPowerLevelFilter = nil
+		return
+	end
+	nMaxPowerLevelFilter = tonumber(_txt)
 	self:RefreshPage()
 end
 
@@ -340,7 +364,11 @@ function GalaxyLibrary:OmegaFilter(item)
 		if (not bQualityFilterEnabled) or tQualityFilter[item.quality] then									--Quality filter
 			if nMinLevelFilter == nil or (item.level ~= nil and item.level >= nMinLevelFilter) then			--Level filter
 				if nMaxLevelFilter == nil or (item.level ~= nil and item.level <= nMaxLevelFilter) then		--Level filter
-					return true
+					if nMinPowerLevelFilter == nil or (item.powerlevel ~= nil and item.powerlevel >= nMinPowerLevelFilter) then			--Level filter
+						if nMaxPowerLevelFilter == nil or (item.powerlevel ~= nil and item.powerlevel <= nMaxPowerLevelFilter) then		--Level filter
+							return true
+						end
+					end
 				end
 			end
 		end
